@@ -56,3 +56,18 @@ Hebbian.prototype.learn = function(stimuli, inputs){
     }
     this.recent = [];
 };
+Hebbian.prototype.do = function(stimuli){
+    var out = [];
+    for(var i in stimuli){
+        if(stimuli[i]){
+            for(var j = 0; j < this.inputs.length; j ++){
+                for(var k = 0; k < this.inputs[j].connections.length; k ++){
+                    if(this.inputs[j].connections[k].name === this.stimuli[i].name){
+                        out[this.inputs[j].name] = true;
+                    }
+                }
+            }
+        }
+    }
+    return out;
+};
