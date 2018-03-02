@@ -60,7 +60,7 @@ Entity.prototype.look = function(){
 Entity.prototype.turn = function(angle){
     //var av = abs(angle - this.a) > 40 ? (abs(angle - this.a)/10) : 4;
     //this.temp.push(new Turn(angle/av, av));
-    this.tA = angle;
+    this.tA += angle;
 };
 Entity.prototype.turnTo = function(angle){
     this.turn(this.a - angle);
