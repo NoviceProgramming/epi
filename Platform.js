@@ -119,7 +119,11 @@ Entity.prototype.process = function(){
     this.a += constrain(this.a - this.tA, -4, 4);
     this.fatigue = max(0, this.fatigue - max(0, this.regen/4-0.5));
     this.stamina = min(this.stamina + this.regen, this.max - this.fatigue);
-    this.algorithm();
+    try{
+	    this.algorithm();
+	}catch(err){
+		println(err);
+	}
 };
 Entity.prototype.draw = function() {
     pushMatrix();
