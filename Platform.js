@@ -116,7 +116,16 @@ Entity.prototype.process = function(){
     this.v += relativeSpeed;
     this.x += cos(this.a) * this.v;
     this.y += sin(this.a) * this.v;
-    this.a += constrain(this.a - this.tA, -4, 4);
+    
+    //this.a = (this.a + 360) % 360;
+    //this.tA = (this.tA + 360) % 360;
+    
+    //todo: "smart" turning
+    this.a += constrain(this.tA - this.a, -4, 4);
+    /*if(this.tA !== this.a){
+        println("]]" + this.tA + ":" + this.a);
+    }*/
+    
     this.fatigue = max(0, this.fatigue - max(0, this.regen/4-0.5));
     this.stamina = min(this.stamina + this.regen, this.max - this.fatigue);
     try{
@@ -189,8 +198,7 @@ var draw = function() {
         entities[i].process();
         entities[i].draw();
         if(entities[i].x > 1800 || entities[i].x < 100){
-            entities[i].a += 180;
-            entities[i].y += 25;
+            entities[i].tA = 180 * (entities[i].x > 1800);
         }
     }
     
