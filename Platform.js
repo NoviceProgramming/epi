@@ -19,6 +19,7 @@ textFont(createFont("Ruluko"));
 smooth();
 
 var camX = 0, camY = 0, camX2 = 0, camY2 = 0, camS = 1, camS2 = 0.3, camV = 7, camF = 3;
+var discrim = 0;
 
 var entities = [];
 var names = ["speed: stamina/20", "constant speed: MAX", "will rest", "full discharge only"];
@@ -45,10 +46,12 @@ var Entity = function(x, y, ID){
     this.regen = 0;
     this.cd = 0;
     this.restart = 100;
+	this.discrim = discrim++;
 };
 Entity.prototype.look = function(){
     var out = [];
     for(var _ = 0; _ < entities.length; _ ++){
+		if(this.discrim === entities[_].discrim){ continue; }
         var relativeAngle = atan2(this.y - entities[_].y, this.x - entities[_].x) - this.a;
         var distance = dist(this.x, this.y, entities[_].x, entities[_].y);
         if(relativeAngle < this.fov/2){
