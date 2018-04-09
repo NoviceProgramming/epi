@@ -22,7 +22,7 @@ var camX = 0, camY = 0, camX2 = 0, camY2 = 0, camS = 1, camS2 = 0.3, camV = 7, c
 var discrim = 0;
 
 var entities = [];
-var names = ["speed: stamina/20", "follow", "will rest", "full discharge only"];
+var names = ["rulebreaker", "follow", "will rest", "full discharge only"];
 var turnLeft = function(start, end, size){
     return min(abs(start-end+size-1), min(abs(start-end-1), abs(start-end-size-1))) < min(abs(start-end+size+1), min(abs(start-end+1), abs(start-end-size+1)));
 };
@@ -51,15 +51,18 @@ Entity.prototype.look = function(){
     var out = [];
     for(var _ = 0; _ < entities.length; _ ++){
 		if(this.discrim === entities[_].discrim){ continue; }
-        var relativeAngle = (this.a - atan2(this.y - entities[_].y, this.x - entities[_].x)) % 360;
+        var relativeAngle = this.a - (atan2(this.y - entities[_].y, this.x - entities[_].x)) % 360 - 180;
         var distance = dist(this.x, this.y, entities[_].x, entities[_].y);
-        if(180 - abs(relativeAngle) < this.fov/2 && distance < 4000){
+        if(abs(relativeAngle) < this.fov/2 && distance < 4000){
             stroke(255, 0, 0);
             line(this.x, this.y, entities[_].x, entities[_].y);
-            out.push({a: 180 - relativeAngle, d: distance, ID: entities[_].ID});
+            out.push({a: relativeAngle, d: distance, ID: entities[_].ID});
         }
     }
     return out;
+};
+Entity.prototype.wait = function(frames){
+    this.cd = this.restart - frames;
 };
 Entity.prototype.turn = function(angle){
     //var av = abs(angle - this.a) > 40 ? (abs(angle - this.a)/10) : 4;
@@ -82,22 +85,26 @@ Entity.prototype.algorithm = function(AI){
      */ 
     switch(AI === undefined ? this.alignment : AI){
         case 0: // testAI
-            if(this.fatigue < 400){
+            if(this.stamina > 100){
                 this.setSpeed(floor(this.stamina/20));
+            }else{
+                this.wait(100);
+                this.setSpeed(0);
             }
+            this.turn(1);
             break;
         case 1: // follow
             var see = this.look();
             if(see[0]){
                 this.setSpeed(~~(see[0].d / 100));
-                this.turn(see[0].a - this.a);
+                this.turnTo(this.a + see[0].a);
             }else{
                 this.setSpeed(0); //S T O P
-                //this.turn(4); // scan
+                this.turn(4); // scan
             }
             break;
         case 2: // will rest lol
-            if(this.fatigue > 700){ this.cd = -100; return; }
+            if(this.fatigue > 700){ this.wait(300); return; }
             this.setSpeed(5);
             break;
         case 3: // FULL DISCHARGE
