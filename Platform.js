@@ -18,14 +18,13 @@ textAlign(CENTER, CENTER);
 textFont(createFont("Ruluko"));
 smooth();
 
-var camX = 0, camY = 0, camX2 = 0, camY2 = 0, camS = 1, camS2 = 0.3, camV = 7, camF = 3;
+var camX = 0, camY = 0, camX2 = 0, camY2 = 0, camS = 1, camS2 = 0.3, camV = 7, camF = 1;
 var discrim = 0;
 
 var entities = [];
-var names = ["speed: stamina/20", "constant speed: MAX", "will rest", "full discharge only"];
-var Turn = function(intensity, duration){
-    this.amt = intensity;
-    this.dur = duration;
+var names = ["speed: stamina/20", "follow", "will rest", "full discharge only"];
+var turnLeft = function(start, end, size){
+    return min(abs(start-end+size-1), min(abs(start-end-1), abs(start-end-size-1))) < min(abs(start-end+size+1), min(abs(start-end+1), abs(start-end-size+1)));
 };
 var Entity = function(x, y, ID){
     this.x = x;
@@ -42,7 +41,7 @@ var Entity = function(x, y, ID){
     this.alignment = ID;
     this.max = 1000;
     this.stamina = 0.4*this.max;
-    this.fatigue = 0;
+    this.fatigue = 90;
     this.regen = 0;
     this.cd = 0;
     this.restart = 100;
@@ -52,10 +51,12 @@ Entity.prototype.look = function(){
     var out = [];
     for(var _ = 0; _ < entities.length; _ ++){
 		if(this.discrim === entities[_].discrim){ continue; }
-        var relativeAngle = atan2(this.y - entities[_].y, this.x - entities[_].x) - this.a;
+        var relativeAngle = (this.a - atan2(this.y - entities[_].y, this.x - entities[_].x)) % 360;
         var distance = dist(this.x, this.y, entities[_].x, entities[_].y);
-        if(relativeAngle < this.fov/2){
-            out.push({a: relativeAngle, d: distance, ID: entities[_].ID});
+        if(180 - abs(relativeAngle) < this.fov/2 && distance < 4000){
+            stroke(255, 0, 0);
+            line(this.x, this.y, entities[_].x, entities[_].y);
+            out.push({a: 180 - relativeAngle, d: distance, ID: entities[_].ID});
         }
     }
     return out;
@@ -69,7 +70,7 @@ Entity.prototype.turnTo = function(angle){
     this.turn(this.a - angle);
 };
 Entity.prototype.setSpeed = function(velocity){
-    if(velocity <= 0){ return; }
+    if(velocity < 0){ return; }
     this._v = velocity;
 };
 Entity.prototype.algorithm = function(AI){
@@ -85,8 +86,15 @@ Entity.prototype.algorithm = function(AI){
                 this.setSpeed(floor(this.stamina/20));
             }
             break;
-        case 1: // faster bot?
-            this.setSpeed(8);
+        case 1: // follow
+            var see = this.look();
+            if(see[0]){
+                this.setSpeed(~~(see[0].d / 100));
+                this.turn(see[0].a - this.a);
+            }else{
+                this.setSpeed(0); //S T O P
+                //this.turn(4); // scan
+            }
             break;
         case 2: // will rest lol
             if(this.fatigue > 700){ this.cd = -100; return; }
@@ -107,7 +115,7 @@ Entity.prototype.algorithm = function(AI){
 Entity.prototype.process = function(){
     this.regen = min(1.01*this.regen + 0.01, 4);
     var relativeSpeed = constrain(constrain(this._v - this.v, -this.topSpeed, this.topSpeed), -this.acceleration, this.acceleration);
-    if(this.stamina > 1 && this.cd > this.restart){
+    if(this.stamina > 1 && this.cd > this.restart & this._v > 0){
         this.stamina -= abs(relativeSpeed) + abs(this.v/3);
         this.fatigue += (abs(relativeSpeed) + abs(this.v/3)) / 5;
         this.regen = max(0, this.regen - (abs(relativeSpeed) + abs(this.v/5)));
@@ -120,22 +128,20 @@ Entity.prototype.process = function(){
     this.x += cos(this.a) * this.v;
     this.y += sin(this.a) * this.v;
     
-    //this.a = (this.a + 360) % 360;
-    //this.tA = (this.tA + 360) % 360;
+    this.a = (this.a + 360) % 360;
+    this.tA = (this.tA + 360) % 360;
     
-    //todo: "smart" turning
-    this.a += constrain(this.tA - this.a, -4, 4);
-    /*if(this.tA !== this.a){
-        println("]]" + this.tA + ":" + this.a);
-    }*/
+    /* "smart" turning, concept (and code) taken from here:*//** https://www.khanacademy.org/cs/a/6141374645600256 */
+    this.a += (1 - 2*( turnLeft(this.a, this.tA, 360) )) * min(abs(this.a - this.tA), 4);
+    // direction (left/right turn) * magnitude (dist, capped at 4)
     
     this.fatigue = max(0, this.fatigue - max(0, this.regen/4-0.5));
     this.stamina = min(this.stamina + this.regen, this.max - this.fatigue);
     try{
-	    this.algorithm();
-	}catch(err){
-		println(err);
-	}
+        this.algorithm();
+    }catch(err){
+        println(err);
+    }
 };
 Entity.prototype.draw = function() {
     pushMatrix();
@@ -156,7 +162,7 @@ Entity.prototype.draw = function() {
     rotate(this.a);
     noStroke();
     fill(0, 0, 0, 1);
-    for(var i = 1; i < 1000; i += ceil(1000-i)/2){
+    for(var i = 1; i < 1000; i += ceil(1000-i)/1.4){
         arc(0, 0, i, i, -this.fov/2, this.fov/2);
     }
     popStyle();
@@ -217,5 +223,5 @@ var draw = function() {
     }
     fill(0, 0, 0);
     textSize(20);
-    text("Currently Viewing:\n" + ((camF === entities.length) ? "Map" : ((camF + 1) + " of " + entities.length + " entities")), 500, 550);
+    text("Currently Viewing:\n" + ((camF === entities.length) ? "Map" : ((camF + 1) + " of " + entities.length + " entities\n'" + names[entities[camF].alignment] + "'")), 500, 550);
 };
