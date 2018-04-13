@@ -1,16 +1,29 @@
 /**RIGHTCLICK && LEFTCLICK TO CHANGE VIEWING
  * 
  * 
- * ok, listen up. so this is just a bot/algorithm contest concept that i just made... (on 1/3/18)
  * Ctrl+F : "@HERE" to go to the area with the algorithms
  * 
- * you can probably ignore it.
  * 
- * 
- *                                          ALL FORMS OF COMMUNITY INTERACTION ARE FORBIDDEN
- * 
-  * 
-  */ 
+
+Algorithm Challenge: Capture the Flag
+
+@RULES:
+You are allowed to read from ALL properties of Entity.
+You are allowed create any integer variables of reasonable amount.
+You are allowed to use (call functions) ALL properties of Entity.
+You are allowed set/modify ONLY the 'RAM' property of Entity and integer variables you have created.
+You are allowed to use 'Math'.
+You are NOT allowed to set/modify variables outside Entity.
+You are NOT allowed to draw to canvas.
+You are NOT allowed set/modify properties of Entity other than 'RAM'.
+You are NOT allowed use functions other than 'Math' and properties of Entity.
+
+Note: You can either create and use properties of Entity.RAM or create and use variables of your own.
+
+@INSTRUCTIONS:
+Design an algorithm
+
+ */ 
 strokeCap(PROJECT);
 rectMode(CENTER);
 imageMode(CENTER);
@@ -18,11 +31,11 @@ textAlign(CENTER, CENTER);
 textFont(createFont("Ruluko"));
 smooth();
 
-var camX = 0, camY = 0, camX2 = 0, camY2 = 0, camS = 1, camS2 = 0.3, camV = 7, camF = 1;
+var camX = 0, camY = 0, camX2 = 0, camY2 = 0, camS = 1, camS2 = 0.3, camV = 7, camF = 0;
 var discrim = 0;
 
 var entities = [];
-var names = ["rulebreaker", "follow", "will rest", "full discharge only"];
+var names = ["rulebreaker", "follow", "will rest", "full discharge only", "initiator", "listener", "relay"];
 var turnLeft = function(start, end, size){
     return min(abs(start-end+size-1), min(abs(start-end-1), abs(start-end-size-1))) < min(abs(start-end+size+1), min(abs(start-end+1), abs(start-end-size+1)));
 };
@@ -46,6 +59,8 @@ var Entity = function(x, y, ID){
     this.cd = 0;
     this.restart = 100;
 	this.discrim = discrim++;
+	this.ID = 0;
+	this.msgCD = 0;
 };
 Entity.prototype.look = function(){
     var out = [];
@@ -61,6 +76,21 @@ Entity.prototype.look = function(){
     }
     return out;
 };
+Entity.prototype.send = function(msg, vol){
+    if(this.msgCD > 0){ return "Still on cooldown; " + this.msgCD + "f remain"; }
+    vol = constrain(vol, 2, 10);
+    for(var _ = 0; _ < entities.length; _ ++){
+        if(this.discrim === entities[_].discrim){ continue; }
+        if(dist(this.x, this.y, entities[_].x, entities[_].y) < vol*100){
+            //Sending dist
+            entities[_].RAM.push(String(msg).substr(0, 4));
+            //4 char limit
+        }
+    }
+    fill(0, 0, 0, 100);
+    ellipse(this.x-camX, this.y-camY, vol*200, vol*200);
+    this.msgCD = vol ? pow(vol, 2) : 16; //Prevention of overuse
+};
 Entity.prototype.wait = function(frames){
     this.cd = this.restart - frames;
 };
@@ -73,7 +103,7 @@ Entity.prototype.turnTo = function(angle){
     this.turn(this.a - angle);
 };
 Entity.prototype.setSpeed = function(velocity){
-    if(velocity < 0){ return; }
+    if(velocity < 0 || isNaN(velocity)){ return; }
     this._v = velocity;
 };
 Entity.prototype.algorithm = function(AI){
@@ -108,15 +138,42 @@ Entity.prototype.algorithm = function(AI){
             this.setSpeed(5);
             break;
         case 3: // FULL DISCHARGE
-            if(this.RAM[0]){
+            if(this.RAM.move){
                 this.setSpeed(7);
                 if(this.stamina < 5){
-                    this.RAM[0] = false;
+                    this.RAM.move = false;
                 }
             }else if(this.stamina > 950){
-                this.RAM[0] = true;
+                this.RAM.move = true;
             }
             break;
+        case 4: // initiator
+            if(this.stamina > 950){
+                if(!this.RAM.move){ this.send("GO", 6); }
+                this.RAM.move = true;
+            }
+            if(this.stamina < 50){
+                if(this.RAM.move){ this.send("STOP", 6); }
+                this.RAM.move = false;
+            }
+            this.turn(4);
+            this.setSpeed(this.RAM.move*7);
+            break;
+        case 5: // listener
+            switch(this.RAM[0]){
+                case "GO":
+                    this.setSpeed(7);
+                    break;
+                case "STOP":
+                    this.setSpeed(0);
+                    break;
+            }
+            this.RAM = []; //clear memory
+            break;
+        case 6: // relay/repeater
+            if(this.RAM[0]){
+                this.send(this.RAM.splice(0, 1), 10);
+            }
     }
 };
 Entity.prototype.process = function(){
@@ -144,6 +201,7 @@ Entity.prototype.process = function(){
     
     this.fatigue = max(0, this.fatigue - max(0, this.regen/4-0.5));
     this.stamina = min(this.stamina + this.regen, this.max - this.fatigue);
+    this.msgCD --;
     try{
         this.algorithm();
     }catch(err){
@@ -168,10 +226,8 @@ Entity.prototype.draw = function() {
     line(-15, -18, -15 + min(this.cd/this.restart*50, 30), -18);
     rotate(this.a);
     noStroke();
-    fill(0, 0, 0, 1);
-    for(var i = 1; i < 1000; i += ceil(1000-i)/1.4){
-        arc(0, 0, i, i, -this.fov/2, this.fov/2);
-    }
+    fill(0, 0, 0, 40);
+    arc(0, 0, 10, 10, -this.fov/2, this.fov/2);
     popStyle();
     popMatrix();
 };
@@ -192,9 +248,17 @@ for(var i = 25; i < 400; i += 50){
 }
 var bg = bkgd.get();
 
-for(var i = 0; i <= 3; i ++){
-    entities.push(new Entity(100, 200+i*50, i));
+entities.push(new Entity(1000, 1000, 4));
+entities.push(new Entity(500, 1000, 6));
+entities.push(new Entity(1000, 500, 6));
+entities.push(new Entity(1500, 1000, 6));
+entities.push(new Entity(1000, 1500, 6));
+
+for(var i = 0; i < 10; i ++){
+    entities.push(new Entity(100, 500+i*50, 5));
+    entities.push(new Entity(1900, 500+i*50, 5));
 }
+
 var mousePressed = function(){
     camF = (camF + 38-mouseButton) % (entities.length + 1);
     camF = camF === -1 ? camF = entities.length : camF;
@@ -231,4 +295,5 @@ var draw = function() {
     fill(0, 0, 0);
     textSize(20);
     text("Currently Viewing:\n" + ((camF === entities.length) ? "Map" : ((camF + 1) + " of " + entities.length + " entities\n'" + names[entities[camF].alignment] + "'")), 500, 550);
+    text(~~this.__frameRate + "FPS", 50, 550);
 };
