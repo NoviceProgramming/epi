@@ -34,6 +34,8 @@ smooth();
 var camX = 0, camY = 0, camX2 = 0, camY2 = 0, camS = 1, camS2 = 0.3, camV = 7, camF = 0;
 var discrim = 0;
 
+var M1 = 100; //speed of "sound" in px
+
 var entities = [];
 var names = ["rulebreaker", "follow", "will rest", "full discharge only", "initiator", "listener", "relay"];
 var turnLeft = function(start, end, size){
@@ -77,18 +79,21 @@ Entity.prototype.look = function(){
     return out;
 };
 Entity.prototype.send = function(msg, vol){
-    if(this.msgCD > 0){ return "Still on cooldown; " + this.msgCD + "f remain"; }
-    vol = constrain(vol, 2, 10);
-    for(var _ = 0; _ < entities.length; _ ++){
+    if(this.msgCD > 0 || this.temp.length){ return "Still on cooldown; " + this.temp.length+this.msgCD + "f remain"; }
+    vol = !!vol ? constrain(vol, 2, 10) : 6;
+    for(var t = 0; t < vol; t += M1/100){
+        this.temp.push({x: this.x, y: this.y, msg: String(msg).substr(0, 4), range: t*200});
+    }
+    /*for(var _ = 0; _ < entities.length; _ ++){
         if(this.discrim === entities[_].discrim){ continue; }
         if(dist(this.x, this.y, entities[_].x, entities[_].y) < vol*100){
             //Sending dist
             entities[_].RAM.push(String(msg).substr(0, 4));
             //4 char limit
         }
-    }
-    fill(0, 0, 0, 100);
-    ellipse(this.x-camX, this.y-camY, vol*200, vol*200);
+    }*/
+    /*fill(0, 0, 0, 50);
+    ellipse(this.x-camX, this.y-camY, vol*200, vol*200);*/
     this.msgCD = vol ? pow(vol, 2) : 16; //Prevention of overuse
 };
 Entity.prototype.wait = function(frames){
@@ -149,11 +154,11 @@ Entity.prototype.algorithm = function(AI){
             break;
         case 4: // initiator
             if(this.stamina > 950){
-                if(!this.RAM.move){ this.send("GO", 6); }
+                if(!this.RAM.move){ this.send("**GO", 6); }
                 this.RAM.move = true;
             }
             if(this.stamina < 50){
-                if(this.RAM.move){ this.send("STOP", 6); }
+                if(this.RAM.move){ this.send("**NO", 6); }
                 this.RAM.move = false;
             }
             this.turn(4);
@@ -162,9 +167,11 @@ Entity.prototype.algorithm = function(AI){
         case 5: // listener
             switch(this.RAM[0]){
                 case "GO":
+                case "*GO":
                     this.setSpeed(7);
                     break;
-                case "STOP":
+                case "NO":
+                case "*NO":
                     this.setSpeed(0);
                     break;
             }
@@ -172,7 +179,10 @@ Entity.prototype.algorithm = function(AI){
             break;
         case 6: // relay/repeater
             if(this.RAM[0]){
-                this.send(this.RAM.splice(0, 1), 10);
+                var rmsg = String(this.RAM.splice(0, 1));
+                if(rmsg.startsWith("*")){ //only send "issued" msgs
+                    this.send(rmsg.replace("*", ""));
+                }
             }
     }
 };
@@ -202,6 +212,23 @@ Entity.prototype.process = function(){
     this.fatigue = max(0, this.fatigue - max(0, this.regen/4-0.5));
     this.stamina = min(this.stamina + this.regen, this.max - this.fatigue);
     this.msgCD --;
+    if(this.temp.length){
+        var obj = this.temp[0];
+        pushStyle();
+        noFill();
+        strokeWeight(M1*2);
+        stroke(0, 0, 0, 80 - obj.range/this.temp[this.temp.length-1].range*60);
+        ellipse(obj.x, obj.y, obj.range, obj.range);
+        strokeWeight(1);
+        popStyle();
+        for(var _ = 0; _ < entities.length; _ ++){
+            if(this.discrim === entities[_].discrim){ continue; }
+            if(abs(dist(this.x, this.y, entities[_].x, entities[_].y) - obj.range/2) < M1){
+                entities[_].RAM.push(obj.msg);
+            }
+        }
+        this.temp.splice(0, 1);
+    }
     try{
         this.algorithm();
     }catch(err){
@@ -253,10 +280,16 @@ entities.push(new Entity(500, 1000, 6));
 entities.push(new Entity(1000, 500, 6));
 entities.push(new Entity(1500, 1000, 6));
 entities.push(new Entity(1000, 1500, 6));
+entities.push(new Entity(500, 500, 6));
+entities.push(new Entity(1500, 500, 6));
+entities.push(new Entity(1500, 1500, 6));
+entities.push(new Entity(500, 1500, 6));
 
-for(var i = 0; i < 10; i ++){
-    entities.push(new Entity(100, 500+i*50, 5));
-    entities.push(new Entity(1900, 500+i*50, 5));
+for(var i = 0; i < 9; i ++){
+    entities.push(new Entity(100, 800+i*50, 5));
+    entities.push(new Entity(1900, 800+i*50, 5));
+    entities.push(new Entity(800+i*50, 100, 5));
+    entities.push(new Entity(800+i*50, 1900, 5));
 }
 
 var mousePressed = function(){
@@ -279,6 +312,9 @@ var draw = function() {
         entities[i].draw();
         if(entities[i].x > 1800 || entities[i].x < 100){
             entities[i].tA = 180 * (entities[i].x > 1800);
+        }
+        if(entities[i].y > 1800 || entities[i].y < 100){
+            entities[i].tA = 90 + 180 * (entities[i].y > 1800);
         }
     }
     
