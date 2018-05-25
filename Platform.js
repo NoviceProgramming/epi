@@ -10,13 +10,13 @@ Algorithm Challenge: Capture the Flag
 @RULES:
 You are allowed to read from ALL properties of Entity.
 You are allowed create any integer variables of reasonable amount.
-You are allowed to use (call functions) ALL properties of Entity.
+You are allowed to use (call functions) ALL properties of (this) Entity.
 You are allowed set/modify ONLY the 'RAM' property of Entity and integer variables you have created.
 You are allowed to use 'Math'.
-You are NOT allowed to set/modify variables outside Entity.
+You are NOT allowed to set/modify variables outside (this) Entity.
 You are NOT allowed to draw to canvas.
 You are NOT allowed set/modify properties of Entity other than 'RAM'.
-You are NOT allowed use functions other than 'Math' and properties of Entity.
+You are NOT allowed use functions other than 'Math' and properties of (this) Entity.
 
 Note: You can either create and use properties of Entity.RAM or create and use variables of your own.
 
@@ -34,14 +34,16 @@ smooth();
 var camX = 0, camY = 0, camX2 = 0, camY2 = 0, camS = 1, camS2 = 0.3, camV = 7, camF = 0;
 var discrim = 0;
 
-var M1 = 100; //speed of "sound" in px
+var M1 = 10; //speed of "sound" in px
 
 var entities = [];
-var names = ["rulebreaker", "follow", "will rest", "full discharge only", "initiator", "listener", "relay"];
+var names = ["red", "blue"];
+var flagID = [];
+var colors = [color(255, 158, 158), color(173, 185, 255)];
 var turnLeft = function(start, end, size){
     return min(abs(start-end+size-1), min(abs(start-end-1), abs(start-end-size-1))) < min(abs(start-end+size+1), min(abs(start-end+1), abs(start-end-size+1)));
 };
-var Entity = function(x, y, ID){
+var Entity = function(x, y, ID, flag){
     this.x = x;
     this.y = y;
     this.a = 0;  // "actual" angle
@@ -61,21 +63,34 @@ var Entity = function(x, y, ID){
     this.cd = 0;
     this.restart = 100;
 	this.discrim = discrim++;
-	this.ID = 0;
+	this.fC = 0;
 	this.msgCD = 0;
+	this.lookCD = 0;
+	this.flag = !!flag;
+	this.hasFlag = false;
+	this.dead = false;
+	if(!!flag){
+	    //println(ID + "::" + entities.length); // Array.length gets updated after constructor is run :thinking:
+	    flagID[ID] = entities.length;
+	}
 };
 Entity.prototype.look = function(){
+    if(this.lookCD > 0){ return []; }
     var out = [];
     for(var _ = 0; _ < entities.length; _ ++){
 		if(this.discrim === entities[_].discrim){ continue; }
         var relativeAngle = this.a - (atan2(this.y - entities[_].y, this.x - entities[_].x)) % 360 - 180;
         var distance = dist(this.x, this.y, entities[_].x, entities[_].y);
         if(abs(relativeAngle) < this.fov/2 && distance < 4000){
-            stroke(255, 0, 0);
-            line(this.x, this.y, entities[_].x, entities[_].y);
-            out.push({a: relativeAngle, d: distance, ID: entities[_].ID});
+            /*for(var g = 0; g < 5; g ++){
+                stroke(255, 100, 100, 40*g+50);
+                line(this.x + (entities[_].x - this.x) * g*0.2, this.y + (entities[_].y - this.y) * g*0.2, this.x + (entities[_].x - this.x) * (g*0.2+0.2), this.y + (entities[_].y - this.y) * (g*0.2+0.2));
+            }*/
+            
+            out.push({a: relativeAngle, d: distance, alignment: entities[_].alignment, flag: entities[_].flag, hasFlag: entities[_].hasFlag, dead: entities[_].dead, friendly: this.alignment === entities[_].alignment});
         }
     }
+    this.lookCD = 1;
     return out;
 };
 Entity.prototype.send = function(msg, vol){
@@ -102,14 +117,26 @@ Entity.prototype.wait = function(frames){
 Entity.prototype.turn = function(angle){
     //var av = abs(angle - this.a) > 40 ? (abs(angle - this.a)/10) : 4;
     //this.temp.push(new Turn(angle/av, av));
-    this.tA += angle;
+    this.tA = -(-(  (this.tA+angle)   % 360) % 360);
 };
 Entity.prototype.turnTo = function(angle){
-    this.turn(this.a - angle);
+    this.tA = angle;
 };
 Entity.prototype.setSpeed = function(velocity){
     if(velocity < 0 || isNaN(velocity)){ return; }
     this._v = velocity;
+};
+Entity.prototype.kill = function(){
+    if(this.hasFlag){
+        for(var i = 0; i < entities.length; i ++){
+            if(entities[i].flag === null && entities[i].alignment !== this.alignment){
+                entities[i].flag = true;
+                break;
+            }
+        }
+    }
+    this.hasFlag = false;
+    this.dead = true;
 };
 Entity.prototype.algorithm = function(AI){
     
@@ -119,7 +146,45 @@ Entity.prototype.algorithm = function(AI){
      * 
      */ 
     switch(AI === undefined ? this.alignment : AI){
-        case 0: // testAI
+        case 0:
+            if(this.fatigue > 700 || this.stamina < 500){ this.wait(300); return; }
+            if(this.hasFlag){
+                this.turnTo(-90);
+                this.setSpeed(4);
+                return;
+            }
+            var see = this.look();
+            var v = this.RAM;
+            if(see !== [] || v.m === undefined){
+                v.m = see;
+            }
+            see = v.m;
+            for(v.i = 0; v.i < see.length; v.i ++){
+                if(see[v.i].flag && !see[v.i].friendly){
+                    this.setSpeed(~~(see[v.i].d / 100) + 2);
+                    this.turnTo(this.a - see[v.i].a);
+                    return;
+                }
+            }
+            this.setSpeed(0); //S T O P
+            this.turn(4); // scan
+            break;
+        case 1:
+            if(this.fatigue > 700){ this.wait(300); return; }
+            var see = this.look();
+            var v = this.RAM;
+            for(v.i = 0; v.i < see.length; v.i ++){
+                if(see[v.i].hasFlag && !see[v.i].friendly){
+                    this.setSpeed(~~(see[v.i].d / 100) + 2);
+                    this.turnTo(this.a - see[v.i].a);
+                    return;
+                }
+            }
+            this.setSpeed(0); //S T O P
+            this.turn(4); // scan
+            break;
+        // the following commented area have examples
+        /*case 0: // testAI
             if(this.stamina > 100){
                 this.setSpeed(floor(this.stamina/20));
             }else{
@@ -128,15 +193,18 @@ Entity.prototype.algorithm = function(AI){
             }
             this.turn(1);
             break;
-        case 1: // follow
+        case 1: // follow the one with the flag
             var see = this.look();
-            if(see[0]){
-                this.setSpeed(~~(see[0].d / 100));
-                this.turnTo(this.a + see[0].a);
-            }else{
-                this.setSpeed(0); //S T O P
-                this.turn(4); // scan
+            var v = this.RAM;
+            for(v.i = 0; v.i < see.length; v.i ++){
+                if(see[v.i].hasFlag){
+                    this.setSpeed(~~(see[v.i].d / 100));
+                    this.turnTo(this.a - see[v.i].a);
+                    return;
+                }
             }
+            this.setSpeed(0); //S T O P
+            this.turn(4); // scan
             break;
         case 2: // will rest lol
             if(this.fatigue > 700){ this.wait(300); return; }
@@ -183,10 +251,37 @@ Entity.prototype.algorithm = function(AI){
                 if(rmsg.startsWith("*")){ //only send "issued" msgs
                     this.send(rmsg.replace("*", ""));
                 }
-            }
+            }*/
     }
 };
 Entity.prototype.process = function(){
+    if(this.flag){
+        for(var $ = 0; $ < entities.length; $ ++){
+            if(this.alignment !== entities[$].alignment && !entities[$].dead){
+                //(this.y > 2000 && entities[$].y > 2000) || (this.y < 2000 && entities[$].y < 2000)
+                if(~~(this.y/2000) === ~~(entities[$].y/2000)){
+                    if(dist(this.x, this.y, entities[$].x, entities[$].y) < 24){
+                        entities[$].hasFlag = true;
+                        entities[$].fC = this.alignment;
+                        this.flag = null;
+                        break;
+                    }
+                }
+            }
+        }
+        return;
+    }
+    if(this.flag === null){ return; }
+    if(~~(this.y/2000) !== ~~(entities[flagID[this.alignment]].y/2000)){
+        for(var $ = 0; $ < entities.length; $ ++){
+            if(this.alignment !== entities[$].alignment && entities[$].flag === false){
+                if(dist(this.x, this.y, entities[$].x, entities[$].y) < 16){
+                    this.kill();
+                }
+            }
+        }
+    }
+    if(this.dead){ return; }
     this.regen = min(1.01*this.regen + 0.01, 4);
     var relativeSpeed = constrain(constrain(this._v - this.v, -this.topSpeed, this.topSpeed), -this.acceleration, this.acceleration);
     if(this.stamina > 1 && this.cd > this.restart & this._v > 0){
@@ -194,8 +289,8 @@ Entity.prototype.process = function(){
         this.fatigue += (abs(relativeSpeed) + abs(this.v/3)) / 5;
         this.regen = max(0, this.regen - (abs(relativeSpeed) + abs(this.v/5)));
     }else{
-        this.v /= 2;
-        this._v /= 2;
+        this.v = max(this.v - 0.6, 0);
+        this._v = max(this.v - 0.6, 0);
         this.cd = this.stamina > 1 ? this.cd + 1 : 0;
     }
     this.v += relativeSpeed;
@@ -212,12 +307,13 @@ Entity.prototype.process = function(){
     this.fatigue = max(0, this.fatigue - max(0, this.regen/4-0.5));
     this.stamina = min(this.stamina + this.regen, this.max - this.fatigue);
     this.msgCD --;
+    this.lookCD --;
     if(this.temp.length){
         var obj = this.temp[0];
         pushStyle();
         noFill();
         strokeWeight(M1*2);
-        stroke(0, 0, 0, 80 - obj.range/this.temp[this.temp.length-1].range*60);
+        stroke(0, 0, (obj.msg.replace("*", "ffffff").length>4)*255, 60 - obj.range/this.temp[this.temp.length-1].range*60);
         ellipse(obj.x, obj.y, obj.range, obj.range);
         strokeWeight(1);
         popStyle();
@@ -238,91 +334,164 @@ Entity.prototype.process = function(){
 Entity.prototype.draw = function() {
     pushMatrix();
     translate(this.x, this.y);
+    if(this.flag !== false){
+        pushStyle();
+        scale(2.5);
+        strokeWeight(3);
+        stroke(179, 113, 0, this.flag*180+70);
+        line(-7, -8, -7, 8);
+        noStroke();
+        fill(this.flag ? colors[this.alignment] : color(180, 180, 180, 70));
+        triangle(-6, -8, -6, 2, 8, -3);
+        strokeWeight(1);
+        popMatrix();
+        popStyle();
+        stroke(colors[this.alignment]);
+        fill(255, 255, 255, 100);
+        rect(this.x-75, this.y-75, 150, 150);
+        return;
+    }
+    fill(colors[this.alignment]);
     ellipse(0, 0, 15, 15);
     fill(0, 0, 0);
     stroke(255, 0, 0, 100-this.stamina*2.55);
-    text(this.alignment+1+"\n\n"+names[this.alignment], 0, 0);
+    text("\n\n" + names[this.alignment], 0, 0);
     pushStyle();
+    stroke(216, 87, 255);
+    //line(-15, -18, -15 + constrain(this.cd/this.restart*50, 0, 30), -18);
+    line(0, 0, 10*cos(this.a), 10*sin(this.a));
+    stroke(0, 0, 0);
+    line(0, 0, 10*cos(this.tA), 10*sin(this.tA));
+    line(0, 0, 4*cos(0), 4*sin(0));
+    
+    noStroke();
+    fill(0, 0, 0, 40);
+    arc(0, 0, 10, 10, this.a -this.fov/2, this.a + this.fov/2);
+    
+    strokeWeight(3);
     stroke(105, 255, 210);
     line(-15, -20, -15 + (this.stamina/this.max)*30, -20);
     stroke(122, 122, 122);
     line(-15 + (this.stamina/this.max)*30, -20, 15 - (this.fatigue/this.max)*30, -20);
     stroke(255, 140, 140);
     line(15 - (this.fatigue/this.max)*30, -20, 15, -20);
-    stroke(216, 87, 255);
-    line(-15, -18, -15 + min(this.cd/this.restart*50, 30), -18);
-    rotate(this.a);
-    noStroke();
-    fill(0, 0, 0, 40);
-    arc(0, 0, 10, 10, -this.fov/2, this.fov/2);
+    
+    if(this.hasFlag){
+        stroke(179, 113, 0);
+        line(-7, -8, -7, 8);
+        noStroke();
+        fill(colors[this.fC]);
+        triangle(-6, -8, -6, 2, 8, -3);
+    }
+    if(this.dead){
+        stroke(255, 0, 0);
+        line(-8, -8, 8, 8);
+        line(8, -8, -8, 8);
+    }
+    strokeWeight(1);
     popStyle();
     popMatrix();
 };
 
 
-var bkgd = createGraphics(400, 400, P2D);
+var bkgd = createGraphics(200, 400, P2D);
 bkgd.background(255, 255, 255);
-bkgd.strokeWeight(2);
+bkgd.strokeWeight(0.6);
 bkgd.stroke(0, 0, 0);
-for(var i = 50; i < 400; i += 50){
-    bkgd.line(i, 0, i, 400);
-    bkgd.line(0, i, 400, i);
-}
-bkgd.strokeWeight(0.4);
 for(var i = 25; i < 400; i += 50){
     bkgd.line(i, 0, i, 400);
     bkgd.line(0, i, 400, i);
 }
-var bg = bkgd.get();
-
-entities.push(new Entity(1000, 1000, 4));
-entities.push(new Entity(500, 1000, 6));
-entities.push(new Entity(1000, 500, 6));
-entities.push(new Entity(1500, 1000, 6));
-entities.push(new Entity(1000, 1500, 6));
-entities.push(new Entity(500, 500, 6));
-entities.push(new Entity(1500, 500, 6));
-entities.push(new Entity(1500, 1500, 6));
-entities.push(new Entity(500, 1500, 6));
-
-for(var i = 0; i < 9; i ++){
-    entities.push(new Entity(100, 800+i*50, 5));
-    entities.push(new Entity(1900, 800+i*50, 5));
-    entities.push(new Entity(800+i*50, 100, 5));
-    entities.push(new Entity(800+i*50, 1900, 5));
+bkgd.strokeWeight(0.3);
+for(var i = 0; i <= 400; i += 50){
+    bkgd.line(i, 0, i, 400);
+    bkgd.line(0, i, 400, i);
+}
+bkgd.strokeWeight(2);
+for(var i = 0; i <= 400; i += 50){
+    bkgd.line(i+20, 200, i + 5, 200);
+    bkgd.line(i+45, 200, i + 30, 200);
 }
 
+    
+var bg = bkgd.get();
+
+/*entities.push(new Entity(1000, 1000, 4));
+entities[0].hasFlag = true;
+var j = 1;
+var k = 5;
+for(var i = 0; i < 9; i ++){
+    var id = j + (k-j)*(i%2);
+    entities.push(new Entity(100, 800+i*50, id));
+    entities.push(new Entity(1900, 800+i*50, id));
+    entities.push(new Entity(800+i*50, 100, id));
+    entities.push(new Entity(800+i*50, 1900, id));
+}*/
+
+
+entities.push(new Entity(1000, 750, 0, true));
+entities.push(new Entity(1000, 3250, 1, true));
+
+for(var i = 0; i < 20; i ++){
+    entities.push(new Entity(100*i, 1000, 0));
+}
+for(var i = 0; i < 20; i ++){
+    entities.push(new Entity(100*i, 3000, 1));
+}
+
+
+var iso = function(){
+    this.xz = 45;
+    this.y = 45;
+    this.t = 1;
+    this.active = false;
+};
+iso.prototype.apply = function(){
+    translate(300 * this.t, 100 * this.t);
+    scale(1, this.y/90);
+    scale(1 + 0.2*this.t);
+    rotate(this.xz);
+    
+    this.xz += (this.active*45 - this.xz) / 24;
+    this.y += ((90 - this.active*45) - this.y) / 24;
+    this.t += (this.active - this.t) / 17;
+};
+var spaceISO = new iso();
+
 var mousePressed = function(){
+    if(mouseButton === 3){
+        spaceISO.active = !spaceISO.active;
+        return;
+    }
     camF = (camF + 38-mouseButton) % (entities.length + 1);
     camF = camF === -1 ? camF = entities.length : camF;
 };
 var draw = function() {
+    spaceISO.apply();
+    
     scale(camS);
     translate(camX, camY);
     camX += (camX2 - camX) / camV;
     camY += (camY2 - camY) / camV;
-    camS += (camS2 - camS) / camV;
+    camS += (camS2 - camS) / camV * 2;
     fill(255, 0, 0);
     background(255, 255, 255);
-    image(bg, 2000, 2000, 4000, 4000);
+    image(bg, 1000, 2000, 2000, 4000);
     textSize(12);
     for(var i = 0; i < entities.length; i ++){
         fill(noise(i/50)*255+100, noise(i/50, i/50)*255+100, 255);
         entities[i].process();
         entities[i].draw();
-        if(entities[i].x > 1800 || entities[i].x < 100){
-            entities[i].tA = 180 * (entities[i].x > 1800);
-        }
-        if(entities[i].y > 1800 || entities[i].y < 100){
-            entities[i].tA = 90 + 180 * (entities[i].y > 1800);
+        if(abs(entities[i].x - 1000) > 1000 || abs(entities[i].y - 2000) > 2000){
+            entities[i].kill();
         }
     }
     
     resetMatrix();
     if(camF === entities.length){
         camS2 = 0.3;
-        camX2 = 0;
-        camY2 = 0;
+        camX2 = mouseX/600 * -600 + 300;
+        camY2 = mouseY/600 * -2500 + 250;
     }else{
         camS2 = 1;
         camX2 = (-entities[camF].x + 300*camS2) * camS2;
@@ -333,3 +502,4 @@ var draw = function() {
     text("Currently Viewing:\n" + ((camF === entities.length) ? "Map" : ((camF + 1) + " of " + entities.length + " entities\n'" + names[entities[camF].alignment] + "'")), 500, 550);
     text(~~this.__frameRate + "FPS", 50, 550);
 };
+
