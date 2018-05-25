@@ -21,7 +21,7 @@ You are NOT allowed use functions other than 'Math' and properties of (this) Ent
 Note: You can either create and use properties of Entity.RAM or create and use variables of your own.
 
 @INSTRUCTIONS:
-Design an algorithm
+Design an algorithm that multiple entities (a team) will operate under to capture the opponent's flag.
 
  */ 
 strokeCap(PROJECT);
@@ -35,6 +35,7 @@ var camX = 0, camY = 0, camX2 = 0, camY2 = 0, camS = 1, camS2 = 0.3, camV = 7, c
 var discrim = 0;
 
 var M1 = 10; //speed of "sound" in px
+var fhr = 120; //flag house radius
 
 var entities = [];
 var names = ["red", "blue"];
@@ -71,14 +72,15 @@ var Entity = function(x, y, ID, flag){
 	this.dead = false;
 	if(!!flag){
 	    //println(ID + "::" + entities.length); // Array.length gets updated after constructor is run :thinking:
-	    flagID[ID] = entities.length;
+	    flagID[ID] = flagID[ID] === undefined ? [] : flagID[ID];
+	    flagID[ID].push(entities.length);
 	}
 };
 Entity.prototype.look = function(){
     if(this.lookCD > 0){ return []; }
     var out = [];
     for(var _ = 0; _ < entities.length; _ ++){
-		if(this.discrim === entities[_].discrim){ continue; }
+		if(this.discrim === entities[_].discrim || entities[_].dead){ continue; }
         var relativeAngle = this.a - (atan2(this.y - entities[_].y, this.x - entities[_].x)) % 360 - 180;
         var distance = dist(this.x, this.y, entities[_].x, entities[_].y);
         if(abs(relativeAngle) < this.fov/2 && distance < 4000){
@@ -272,7 +274,7 @@ Entity.prototype.process = function(){
         return;
     }
     if(this.flag === null){ return; }
-    if(~~(this.y/2000) !== ~~(entities[flagID[this.alignment]].y/2000)){
+    if(~~(this.y/2000) !== ~~(entities[flagID[this.alignment][0]].y/2000)){
         for(var $ = 0; $ < entities.length; $ ++){
             if(this.alignment !== entities[$].alignment && entities[$].flag === false){
                 if(dist(this.x, this.y, entities[$].x, entities[$].y) < 16){
@@ -294,9 +296,21 @@ Entity.prototype.process = function(){
         this.cd = this.stamina > 1 ? this.cd + 1 : 0;
     }
     this.v += relativeSpeed;
+    this.px = this.x;
+    this.py = this.y;
     this.x += cos(this.a) * this.v;
     this.y += sin(this.a) * this.v;
     
+    for(var f = 0; f < flagID[this.alignment].length; f ++){
+        if(abs(this.x - entities[flagID[this.alignment][f]].x) < fhr && abs(this.y - entities[flagID[this.alignment][f]].y) < fhr){
+            if(abs(this.x - entities[flagID[this.alignment][f]].x) < fhr*0.95){
+                this.x = this.px;
+            }
+            if(abs(this.y - entities[flagID[this.alignment][f]].y) < fhr*0.95){
+                this.y = this.py;
+            }
+        }
+    }
     this.a = (this.a + 360) % 360;
     this.tA = (this.tA + 360) % 360;
     
@@ -348,7 +362,7 @@ Entity.prototype.draw = function() {
         popStyle();
         stroke(colors[this.alignment]);
         fill(255, 255, 255, 100);
-        rect(this.x-75, this.y-75, 150, 150);
+        rect(this.x-fhr, this.y-fhr, fhr*2, fhr*2);
         return;
     }
     fill(colors[this.alignment]);
@@ -369,11 +383,11 @@ Entity.prototype.draw = function() {
     arc(0, 0, 10, 10, this.a -this.fov/2, this.a + this.fov/2);
     
     strokeWeight(3);
-    stroke(105, 255, 210);
+    stroke(105, 255, 210, 100);
     line(-15, -20, -15 + (this.stamina/this.max)*30, -20);
-    stroke(122, 122, 122);
+    stroke(122, 122, 122, 100);
     line(-15 + (this.stamina/this.max)*30, -20, 15 - (this.fatigue/this.max)*30, -20);
-    stroke(255, 140, 140);
+    stroke(255, 140, 140, 100);
     line(15 - (this.fatigue/this.max)*30, -20, 15, -20);
     
     if(this.hasFlag){
@@ -429,14 +443,16 @@ for(var i = 0; i < 9; i ++){
 }*/
 
 
-entities.push(new Entity(1000, 750, 0, true));
-entities.push(new Entity(1000, 3250, 1, true));
+entities.push(new Entity(500, 500, 0, true));
+entities.push(new Entity(1500, 500, 0, true));
+entities.push(new Entity(500, 3500, 1, true));
+entities.push(new Entity(1500, 3500, 1, true));
 
-for(var i = 0; i < 20; i ++){
-    entities.push(new Entity(100*i, 1000, 0));
+for(var i = 0; i < 30; i ++){
+    entities.push(new Entity(65*i, 1000, 0));
 }
-for(var i = 0; i < 20; i ++){
-    entities.push(new Entity(100*i, 3000, 1));
+for(var i = 0; i < 30; i ++){
+    entities.push(new Entity(65*i, 3000, 1));
 }
 
 
@@ -502,4 +518,3 @@ var draw = function() {
     text("Currently Viewing:\n" + ((camF === entities.length) ? "Map" : ((camF + 1) + " of " + entities.length + " entities\n'" + names[entities[camF].alignment] + "'")), 500, 550);
     text(~~this.__frameRate + "FPS", 50, 550);
 };
-
