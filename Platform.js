@@ -44,6 +44,7 @@ var colors = [color(255, 158, 158), color(173, 185, 255)];
 var turnLeft = function(start, end, size){
     return min(abs(start-end+size-1), min(abs(start-end-1), abs(start-end-size-1))) < min(abs(start-end+size+1), min(abs(start-end+1), abs(start-end-size+1)));
 };
+var eID = 0;
 var Entity = function(x, y, ID, flag){
     this.x = x;
     this.y = y;
@@ -51,11 +52,11 @@ var Entity = function(x, y, ID, flag){
 	this.tA = 0; // target angle
     this.v = 0;
     this._v = 0;
-    this.RAM = []; // limited to integers only i guess
+    this.RAM = [];
     this.temp = []; // don't touch this :thinkban:
     this.fov = 120;
     this.acceleration = 0.05;
-    this.topSpeed = 8;
+    this.topSpeed = 3;
     this.alignment = ID;
     this.max = 1000;
     this.stamina = 0.4*this.max;
@@ -70,11 +71,15 @@ var Entity = function(x, y, ID, flag){
 	this.flag = !!flag;
 	this.hasFlag = false;
 	this.dead = false;
+	this.ID = eID++;
 	if(!!flag){
 	    //println(ID + "::" + entities.length); // Array.length gets updated after constructor is run :thinking:
 	    flagID[ID] = flagID[ID] === undefined ? [] : flagID[ID];
 	    flagID[ID].push(entities.length);
 	}
+};
+Entity.prototype.safe = function(){
+    return ~~(this.y/2000) === ~~(entities[flagID[this.alignment][0]].y/2000);
 };
 Entity.prototype.look = function(){
     if(this.lookCD > 0){ return []; }
@@ -149,7 +154,7 @@ Entity.prototype.algorithm = function(AI){
      */ 
     switch(AI === undefined ? this.alignment : AI){
         case 0:
-            if(this.fatigue > 700 || this.stamina < 500){ this.wait(300); return; }
+            if(this.fatigue > 700 || (this.stamina < 500 && !this.hasFlag)){ this.wait(300); return; }
             if(this.hasFlag){
                 this.turnTo(-90);
                 this.setSpeed(4);
@@ -172,11 +177,16 @@ Entity.prototype.algorithm = function(AI){
             this.turn(4); // scan
             break;
         case 1:
+            if(this.hasFlag || !this.safe()){
+                this.turnTo(90);
+                this.setSpeed(4);
+                return;
+            }
             if(this.fatigue > 700){ this.wait(300); return; }
             var see = this.look();
             var v = this.RAM;
             for(v.i = 0; v.i < see.length; v.i ++){
-                if(see[v.i].hasFlag && !see[v.i].friendly){
+                if((see[v.i].hasFlag || this.ID%2) && !see[v.i].friendly && this.safe()){
                     this.setSpeed(~~(see[v.i].d / 100) + 2);
                     this.turnTo(this.a - see[v.i].a);
                     return;
@@ -261,7 +271,7 @@ Entity.prototype.process = function(){
         for(var $ = 0; $ < entities.length; $ ++){
             if(this.alignment !== entities[$].alignment && !entities[$].dead){
                 //(this.y > 2000 && entities[$].y > 2000) || (this.y < 2000 && entities[$].y < 2000)
-                if(~~(this.y/2000) === ~~(entities[$].y/2000)){
+                if(this.safe()){
                     if(dist(this.x, this.y, entities[$].x, entities[$].y) < 24){
                         entities[$].hasFlag = true;
                         entities[$].fC = this.alignment;
@@ -295,12 +305,15 @@ Entity.prototype.process = function(){
         this._v = max(this.v - 0.6, 0);
         this.cd = this.stamina > 1 ? this.cd + 1 : 0;
     }
-    this.v += relativeSpeed;
+    this.v += relativeSpeed * (this.hasFlag ? 0.85 : 1);
     this.px = this.x;
     this.py = this.y;
     this.x += cos(this.a) * this.v;
     this.y += sin(this.a) * this.v;
     
+    //if(this.hasFlag && ){
+        
+    //}
     for(var f = 0; f < flagID[this.alignment].length; f ++){
         if(abs(this.x - entities[flagID[this.alignment][f]].x) < fhr && abs(this.y - entities[flagID[this.alignment][f]].y) < fhr){
             if(abs(this.x - entities[flagID[this.alignment][f]].x) < fhr*0.95){
