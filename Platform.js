@@ -1,11 +1,10 @@
-/**RIGHTCLICK && LEFTCLICK TO CHANGE VIEWING
- * 
- * 
- * Ctrl+F : "@HERE" to go to the area with the algorithms
- * 
- * 
+/*
+RIGHTCLICK && LEFTCLICK TO CHANGE FOCUS
+MIDDLECLICK TO TOGGLE PERSPECTIVE
+SCROLL TO ZOOM IN/OUT
 
-Algorithm Challenge: Capture the Flag
+ * Ctrl+F : "@HERE" to go to the area with the algorithms
+*//**Algorithm Challenge: Capture the Flag
 
 @RULES:
 You are allowed to read from ALL properties of Entity.
@@ -38,7 +37,7 @@ var M1 = 10; //speed of "sound" in px
 var fhr = 120; //flag house radius
 
 var entities = [];
-var names = ["red", "blue"];
+var names = ["red", "blue", "green", "gray", "yellow", "purple", "orange"];
 var pts = [0, 0];
 var flagID = [];
 
@@ -46,7 +45,7 @@ var teamAid = 0;
 var teamBid = 1;
 var fElapsed = 0;
 
-var colors = [color(255, 158, 158), color(173, 185, 255)];
+var colors = [color(255, 158, 158), color(173, 185, 255), color(169, 255, 158), color(181, 181, 181), color(254, 255, 168), color(252, 154, 239), color(255, 219, 173)];
 var turnLeft = function(start, end, size){
     return min(abs(start-end+size-1), min(abs(start-end-1), abs(start-end-size-1))) < min(abs(start-end+size+1), min(abs(start-end+1), abs(start-end-size+1)));
 };
@@ -128,7 +127,7 @@ Entity.prototype.send = function(msg, vol){
     }*/
     /*fill(0, 0, 0, 50);
     ellipse(this.x-camX, this.y-camY, vol*200, vol*200);*/
-    this.msgCD = vol ? pow(vol, 2) : 16; //Prevention of overuse
+    this.msgCD = 5 + 2.85*pow(vol, 1.5); //Prevention of overuse
 };
 Entity.prototype.wait = function(frames){
     this.cd = this.restart - frames;
@@ -502,6 +501,11 @@ iso.prototype.apply = function(){
 };
 var spaceISO = new iso();
 
+var mouseScrolled = function() {
+    //jshint noarg: false
+    arguments.callee.caller.arguments[0].preventDefault();
+    /*camS = */camS2 = constrain(camS2 + mouseScroll*0.05, 0.15, 1.2);
+};
 var mousePressed = function(){
     if(mouseButton === 3){
         spaceISO.active = !spaceISO.active;
@@ -509,11 +513,22 @@ var mousePressed = function(){
     }
     camF = (camF + 38-mouseButton) % (entities.length + 1);
     camF = camF === -1 ? camF = entities.length : camF;
+    if(camF === entities.length){
+        camS2 = 0.3;
+        camX2 = mouseX/600 * -600 + 300;
+        camY2 = mouseY/600 * -2500 + 250;
+    }else{
+        camS2 = 1;
+        camX2 = (-entities[camF].x + 300*camS2) * camS2;
+        camY2 = (-entities[camF].y + 300*camS2) * camS2;
+    }
+    camS2 = camF === entities.length ? 0.3 : 1;
 };
 var draw = function() {
     spaceISO.apply();
     
-    translate(camX*camS, camY*camS);
+    translate(-camX*camS, -camY*camS);
+    translate(300, 300);
     scale(camS);
     camX += (camX2 - camX) / camV;
     camY += (camY2 - camY) / camV;
@@ -524,7 +539,7 @@ var draw = function() {
     textSize(12);
     for(var i = 0; i < entities.length; i ++){
         fill(noise(i/50)*255+100, noise(i/50, i/50)*255+100, 255);
-        entities[i].process();
+        //entities[i].process();
         entities[i].draw();
         if(abs(entities[i].x - 1000) > 1000 || abs(entities[i].y - 2000) > 2000){
             entities[i].kill();
@@ -533,13 +548,11 @@ var draw = function() {
     noStroke();
     resetMatrix();
     if(camF === entities.length){
-        camS2 = 0.3;
-        camX2 = mouseX/600 * -600 + 300;
-        camY2 = mouseY/600 * -2500 + 250;
+        camX2 = mouseX/600 * 2000;
+        camY2 = mouseY/600 * 4000;
     }else{
-        camS2 = 1;
-        camX2 = (-entities[camF].x + 300*camS2) * camS2;
-        camY2 = (-entities[camF].y + 300*camS2) * camS2;
+        camX2 = entities[camF].x;
+        camY2 = entities[camF].y;
     }
     fill(217, 217, 217, 100);
     rect(200, 25, 200, 80);
