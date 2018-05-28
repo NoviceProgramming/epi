@@ -315,8 +315,9 @@ Entity.prototype.process = function(){
                 }
             }
             if(abs(this.x - jailX) < 100 && abs(this.y - (2000 + ((this.y>2000)*2-1)*jailY)) < 100 && !this.temp){
-                for(var t = 0; t < 1; t += M1/100){
-                    this.temp.push({x: this.x, y: this.y, msg: "RELEASE", range: t*200});
+                //Liberation !!
+                for(var t = 0; t < 1.5; t += M1/100){
+                    this.temp.push({x: jailX, y: (2000 + ((this.y>2000)*2-1)*jailY), msg: "RELEASE", range: t*200});
                 }
             }
         }
@@ -418,7 +419,7 @@ Entity.prototype.draw = function() {
     fill(colors[this.alignment]);
     ellipse(0, 0, 15, 15);
     fill(0, 0, 0);
-    stroke(255, 0, 0, 100-this.stamina*2.55);
+    stroke(255, 0, 0, 100-this.fatigue*2.55);
     text("\n\n" + names[this.alignment], 0, 0);
     stroke(216, 87, 255);
     //line(-15, -18, -15 + constrain(this.cd/this.restart*50, 0, 30), -18);
