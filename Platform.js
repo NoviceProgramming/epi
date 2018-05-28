@@ -57,8 +57,8 @@ var Entity = function(x, y, ID, flag){
 	this.tA = 0; // target angle
     this.v = 0;
     this._v = 0;
-    this.RAM = []; // limited to integers only i guess
-    this.temp = []; // don't touch this :thinkban:
+    this.RAM = [];
+    this.temp = [];
     this.fov = 120;
     this.acceleration = 0.05;
     this.topSpeed = 3;
@@ -70,7 +70,7 @@ var Entity = function(x, y, ID, flag){
     this.cd = 0;
     this.restart = 100;
 	this.discrim = discrim++;
-	this.fC = 0;
+	this.fC = 0; // flag color & id (if holding one)
 	this.msgCD = 0;
 	this.lookCD = 0;
 	this.flag = !!flag;
@@ -310,7 +310,6 @@ Entity.prototype.process = function(){
             }
         }
     }
-    if(this.dead){ return; }
     this.regen = min(1.01*this.regen + 0.01, 4);
     var relativeSpeed = constrain(constrain(this._v - this.v, -this.topSpeed, this.topSpeed), -this.acceleration, this.acceleration);
     if(this.stamina > 1 && this.cd > this.restart & this._v > 0){
@@ -335,8 +334,6 @@ Entity.prototype.process = function(){
             this.y = fh.y + constrain(sin(a) * fhr * 1.42, -fhr*1.1, fhr*1.1);
         }
     }
-    this.a = (this.a + 360) % 360;
-    this.tA = (this.tA + 360) % 360;
     
     /* "smart" turning, concept (and code) taken from here:*//** https://www.khanacademy.org/cs/a/6141374645600256 */
     this.a += (1 - 2*( turnLeft(this.a, this.tA, 360) )) * min(abs(this.a - this.tA), 4);
@@ -344,6 +341,15 @@ Entity.prototype.process = function(){
     
     this.fatigue = max(0, this.fatigue - max(0, this.regen/4-0.5));
     this.stamina = min(this.stamina + this.regen, this.max - this.fatigue);
+    
+    if(this.dead){
+        //this.x += constrain(2000 - this.x, -1.4, 1.4);
+        //this.y += constrain((750 + (this.y>2000)*2500) - this.y, -1.4, 1.4);
+        this.tA = atan2((750 + (this.y>2000)*2500) - this.y, 2000 - this.x);
+        this._v = 2;
+        return;
+    }
+    
     this.msgCD --;
     this.lookCD --;
     if(this.temp.length){
@@ -435,9 +441,9 @@ Entity.prototype.draw = function() {
 };
 
 
-var bkgd = createGraphics(200, 400, P2D);
+var bkgd = createGraphics(250, 400, P2D);
 bkgd.background(255, 255, 255);
-bkgd.strokeWeight(0.6);
+bkgd.strokeWeight(0.4);
 bkgd.stroke(0, 0, 0);
 for(var i = 25; i < 400; i += 50){
     bkgd.line(i, 0, i, 400);
@@ -470,10 +476,10 @@ for(var i = 0; i < 9; i ++){
 }*/
 
 
-entities.push(new Entity(500, 500, 0, true));
-entities.push(new Entity(1500, 500, 0, true));
-entities.push(new Entity(500, 3500, 1, true));
-entities.push(new Entity(1500, 3500, 1, true));
+entities.push(new Entity(500, 500, teamAid, true));
+entities.push(new Entity(1500, 500, teamAid, true));
+entities.push(new Entity(500, 3500, teamBid, true));
+entities.push(new Entity(1500, 3500, teamBid, true));
 
 for(var i = 0; i < 30; i ++){
     entities.push(new Entity(65*i, 1000, 0));
@@ -535,20 +541,20 @@ var draw = function() {
     camS += (camS2 - camS) / camV * 2;
     fill(255, 0, 0);
     background(255, 255, 255);
-    image(bg, 1000, 2000, 2000, 4000);
+    image(bg, 1250, 2000, 2500, 4000);
     textSize(12);
     for(var i = 0; i < entities.length; i ++){
         fill(noise(i/50)*255+100, noise(i/50, i/50)*255+100, 255);
-        //entities[i].process();
+        entities[i].process();
         entities[i].draw();
-        if(abs(entities[i].x - 1000) > 1000 || abs(entities[i].y - 2000) > 2000){
+        if(abs(entities[i].x - 1250) > 2500 || abs(entities[i].y - 2000) > 2000){
             entities[i].kill();
         }
     }
     noStroke();
     resetMatrix();
     if(camF === entities.length){
-        camX2 = mouseX/600 * 2000;
+        camX2 = mouseX/600 * 2500;
         camY2 = mouseY/600 * 4000;
     }else{
         camX2 = entities[camF].x;
