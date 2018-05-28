@@ -39,7 +39,13 @@ var fhr = 120; //flag house radius
 
 var entities = [];
 var names = ["red", "blue"];
+var pts = [0, 0];
 var flagID = [];
+
+var teamAid = 0;
+var teamBid = 1;
+var fElapsed = 0;
+
 var colors = [color(255, 158, 158), color(173, 185, 255)];
 var turnLeft = function(start, end, size){
     return min(abs(start-end+size-1), min(abs(start-end-1), abs(start-end-size-1))) < min(abs(start-end+size+1), min(abs(start-end+1), abs(start-end-size+1)));
@@ -52,7 +58,7 @@ var Entity = function(x, y, ID, flag){
 	this.tA = 0; // target angle
     this.v = 0;
     this._v = 0;
-    this.RAM = [];
+    this.RAM = []; // limited to integers only i guess
     this.temp = []; // don't touch this :thinkban:
     this.fov = 120;
     this.acceleration = 0.05;
@@ -93,8 +99,14 @@ Entity.prototype.look = function(){
                 stroke(255, 100, 100, 40*g+50);
                 line(this.x + (entities[_].x - this.x) * g*0.2, this.y + (entities[_].y - this.y) * g*0.2, this.x + (entities[_].x - this.x) * (g*0.2+0.2), this.y + (entities[_].y - this.y) * (g*0.2+0.2));
             }*/
-            
-            out.push({a: relativeAngle, d: distance, alignment: entities[_].alignment, flag: entities[_].flag, hasFlag: entities[_].hasFlag, dead: entities[_].dead, friendly: this.alignment === entities[_].alignment});
+            out.push({
+                a: relativeAngle, 
+                dist: distance, 
+                alignment: entities[_].alignment, 
+                isFlag: entities[_].flag, 
+                hasFlag: entities[_].hasFlag, 
+                dead: entities[_].dead, 
+                friendly: this.alignment === entities[_].alignment});
         }
     }
     this.lookCD = 1;
@@ -133,18 +145,6 @@ Entity.prototype.setSpeed = function(velocity){
     if(velocity < 0 || isNaN(velocity)){ return; }
     this._v = velocity;
 };
-Entity.prototype.kill = function(){
-    if(this.hasFlag){
-        for(var i = 0; i < entities.length; i ++){
-            if(entities[i].flag === null && entities[i].alignment !== this.alignment){
-                entities[i].flag = true;
-                break;
-            }
-        }
-    }
-    this.hasFlag = false;
-    this.dead = true;
-};
 Entity.prototype.algorithm = function(AI){
     
     /**
@@ -167,8 +167,8 @@ Entity.prototype.algorithm = function(AI){
             }
             see = v.m;
             for(v.i = 0; v.i < see.length; v.i ++){
-                if(see[v.i].flag && !see[v.i].friendly){
-                    this.setSpeed(~~(see[v.i].d / 100) + 2);
+                if(see[v.i].isFlag && !see[v.i].friendly){
+                    this.setSpeed(~~(see[v.i].dist / 100) + 2);
                     this.turnTo(this.a - see[v.i].a);
                     return;
                 }
@@ -187,7 +187,7 @@ Entity.prototype.algorithm = function(AI){
             var v = this.RAM;
             for(v.i = 0; v.i < see.length; v.i ++){
                 if((see[v.i].hasFlag || this.ID%2) && !see[v.i].friendly && this.safe()){
-                    this.setSpeed(~~(see[v.i].d / 100) + 2);
+                    this.setSpeed(~~(see[v.i].dist / 100) + 2);
                     this.turnTo(this.a - see[v.i].a);
                     return;
                 }
@@ -266,6 +266,18 @@ Entity.prototype.algorithm = function(AI){
             }*/
     }
 };
+Entity.prototype.kill = function(){
+    if(this.hasFlag){
+        for(var i = 0; i < entities.length; i ++){
+            if(entities[i].flag === null && entities[i].alignment !== this.alignment){
+                entities[i].flag = true;
+                break;
+            }
+        }
+    }
+    this.hasFlag = false;
+    this.dead = true;
+};
 Entity.prototype.process = function(){
     if(this.flag){
         for(var $ = 0; $ < entities.length; $ ++){
@@ -274,7 +286,7 @@ Entity.prototype.process = function(){
                 if(this.safe()){
                     if(dist(this.x, this.y, entities[$].x, entities[$].y) < 24){
                         entities[$].hasFlag = true;
-                        entities[$].fC = this.alignment;
+                        entities[$].fC = this.ID; // Keep track of which flag was taken.
                         this.flag = null;
                         break;
                     }
@@ -284,7 +296,13 @@ Entity.prototype.process = function(){
         return;
     }
     if(this.flag === null){ return; }
-    if(~~(this.y/2000) !== ~~(entities[flagID[this.alignment][0]].y/2000)){
+    if(this.safe()){
+        if(this.hasFlag){
+            this.hasFlag = false;
+            pts[this.alignment] ++;
+            entities[this.fC].flag = true;
+        }
+    }else{
         for(var $ = 0; $ < entities.length; $ ++){
             if(this.alignment !== entities[$].alignment && entities[$].flag === false){
                 if(dist(this.x, this.y, entities[$].x, entities[$].y) < 16){
@@ -310,10 +328,6 @@ Entity.prototype.process = function(){
     this.py = this.y;
     this.x += cos(this.a) * this.v;
     this.y += sin(this.a) * this.v;
-    
-    //if(this.hasFlag && ){
-        
-    //}
     for(var f = 0; f < flagID[this.alignment].length; f ++){
         if(abs(this.x - entities[flagID[this.alignment][f]].x) < fhr && abs(this.y - entities[flagID[this.alignment][f]].y) < fhr){
             if(abs(this.x - entities[flagID[this.alignment][f]].x) < fhr*0.95){
@@ -362,6 +376,12 @@ Entity.prototype.draw = function() {
     pushMatrix();
     translate(this.x, this.y);
     if(this.flag !== false){
+        stroke(colors[this.alignment]);
+        fill(0, 0, 0, 35);
+        rect(-fhr, -fhr, fhr*2, fhr*2);
+        noStroke();
+        fill(255, 255, 255, 80);
+        rect(-fhr/4, -fhr/4, fhr/2, fhr/2);
         pushStyle();
         scale(2.5);
         strokeWeight(3);
@@ -373,9 +393,6 @@ Entity.prototype.draw = function() {
         strokeWeight(1);
         popMatrix();
         popStyle();
-        stroke(colors[this.alignment]);
-        fill(255, 255, 255, 100);
-        rect(this.x-fhr, this.y-fhr, fhr*2, fhr*2);
         return;
     }
     fill(colors[this.alignment]);
@@ -407,7 +424,7 @@ Entity.prototype.draw = function() {
         stroke(179, 113, 0);
         line(-7, -8, -7, 8);
         noStroke();
-        fill(colors[this.fC]);
+        fill(colors[entities[this.fC].alignment]);
         triangle(-6, -8, -6, 2, 8, -3);
     }
     if(this.dead){
@@ -498,8 +515,8 @@ var mousePressed = function(){
 var draw = function() {
     spaceISO.apply();
     
+    translate(camX*camS, camY*camS);
     scale(camS);
-    translate(camX, camY);
     camX += (camX2 - camX) / camV;
     camY += (camY2 - camY) / camV;
     camS += (camS2 - camS) / camV * 2;
@@ -515,7 +532,7 @@ var draw = function() {
             entities[i].kill();
         }
     }
-    
+    noStroke();
     resetMatrix();
     if(camF === entities.length){
         camS2 = 0.3;
@@ -526,8 +543,18 @@ var draw = function() {
         camX2 = (-entities[camF].x + 300*camS2) * camS2;
         camY2 = (-entities[camF].y + 300*camS2) * camS2;
     }
+    fill(217, 217, 217, 100);
+    rect(200, 25, 200, 80);
     fill(0, 0, 0);
     textSize(20);
     text("Currently Viewing:\n" + ((camF === entities.length) ? "Map" : ((camF + 1) + " of " + entities.length + " entities\n'" + names[entities[camF].alignment] + "'")), 500, 550);
     text(~~this.__frameRate + "FPS", 50, 550);
+    text((fElapsed/1000).toFixed(1) + "kf", 300, 80);
+    textSize(40);
+    text("-", 300, 50);
+    fill(colors[teamAid]);
+    text(pts[teamAid], 250, 50);
+    fill(colors[teamBid]);
+    text(pts[teamBid], 350, 50);
+    fElapsed ++;
 };
