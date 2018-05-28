@@ -331,12 +331,9 @@ Entity.prototype.process = function(){
     for(var f = 0; f < flagID[this.alignment].length; f ++){
         var fh = entities[flagID[this.alignment][f]];
         if(abs(this.x - fh.x) < fhr && abs(this.y - fh.y) < fhr && fh.flag){
-            if(abs(this.x - fh.x) < fhr*0.95){
-                this.x = this.px;
-            }
-            if(abs(this.y - fh.y) < fhr*0.95){
-                this.y = this.py;
-            }
+            var a = atan2(this.y - fh.y, this.x - fh.x);
+            this.x = fh.x + constrain(cos(a) * fhr * 1.42, -fhr*1.1, fhr*1.1); //1.42 > sqrt(2)
+            this.y = fh.y + constrain(sin(a) * fhr * 1.42, -fhr*1.1, fhr*1.1);
         }
     }
     this.a = (this.a + 360) % 360;
