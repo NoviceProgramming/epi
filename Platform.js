@@ -329,11 +329,12 @@ Entity.prototype.process = function(){
     this.x += cos(this.a) * this.v;
     this.y += sin(this.a) * this.v;
     for(var f = 0; f < flagID[this.alignment].length; f ++){
-        if(abs(this.x - entities[flagID[this.alignment][f]].x) < fhr && abs(this.y - entities[flagID[this.alignment][f]].y) < fhr){
-            if(abs(this.x - entities[flagID[this.alignment][f]].x) < fhr*0.95){
+        var fh = entities[flagID[this.alignment][f]];
+        if(abs(this.x - fh.x) < fhr && abs(this.y - fh.y) < fhr && fh.flag){
+            if(abs(this.x - fh.x) < fhr*0.95){
                 this.x = this.px;
             }
-            if(abs(this.y - entities[flagID[this.alignment][f]].y) < fhr*0.95){
+            if(abs(this.y - fh.y) < fhr*0.95){
                 this.y = this.py;
             }
         }
@@ -377,7 +378,7 @@ Entity.prototype.draw = function() {
     translate(this.x, this.y);
     if(this.flag !== false){
         stroke(colors[this.alignment]);
-        fill(0, 0, 0, 35);
+        fill(0, 0, 0, 10+25*this.flag);
         rect(-fhr, -fhr, fhr*2, fhr*2);
         noStroke();
         fill(255, 255, 255, 80);
