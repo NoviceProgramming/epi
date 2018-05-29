@@ -276,6 +276,7 @@ Entity.prototype.kill = function(){
             }
         }
     }
+    this.RAM = [];
     this.v = 0;
     this.hasFlag = false;
     this.alive = false;
