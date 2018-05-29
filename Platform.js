@@ -57,16 +57,14 @@ var colors = [color(255, 158, 158), color(173, 185, 255), color(169, 255, 158), 
 var turnLeft = function(start, end, size){
     return min(abs(start-end+size-1), min(abs(start-end-1), abs(start-end-size-1))) < min(abs(start-end+size+1), min(abs(start-end+1), abs(start-end-size+1)));
 };
-var eID = 0;
 var Entity = function(x, y, ID, flag){
-    this.ID = eID++;
     this.RAM = [];
     this.a = 0;  // "actual" angle
     this.acceleration = 0.05;
     this.alignment = ID;
     this.alive = true;
     this.cd = 0;
-    this.discrim = discrim++;
+    this.discriminator = discrim++;
     this.fC = 0; // flag color & id (if holding one)
     this.fatigue = 90;
     this.flag = !!flag;
@@ -96,7 +94,7 @@ Entity.prototype.look = function(){
     if(this.lookCD > 0){ return "Still on cooldown; " + this.lookCD + "f remain"; }
     var out = [];
     for(var _ = 0; _ < entities.length; _ ++){
-		if(this.discrim === entities[_].discrim || !entities[_].alive){ continue; }
+		if(this.discriminator === entities[_].discriminator || !entities[_].alive){ continue; }
         var relativeAngle = this.a - (atan2(this.y - entities[_].y, this.x - entities[_].x)) % 360 - 180;
         var distance = dist(this.x, this.y, entities[_].x, entities[_].y);
         if(abs(relativeAngle) < this.fov/2 && distance < 4000){
@@ -123,7 +121,7 @@ Entity.prototype.send = function(msg, vol){
         this.temp.push({x: this.x, y: this.y, msg: String(msg).substr(0, 4), range: t*200});
     }
     /*for(var _ = 0; _ < entities.length; _ ++){
-        if(this.discrim === entities[_].discrim){ continue; }
+        if(this.discriminator === entities[_].discriminator){ continue; }
         if(dist(this.x, this.y, entities[_].x, entities[_].y) < vol*100){
             //Sending dist
             entities[_].RAM.push(String(msg).substr(0, 4));
@@ -189,7 +187,7 @@ Entity.prototype.algorithm = function(AI){
             var see = this.look();
             var v = this.RAM;
             for(v.i = 0; v.i < see.length; v.i ++){
-                if((see[v.i].hasFlag || this.ID%2) && !see[v.i].friendly && this.safe){
+                if((see[v.i].hasFlag || this.discriminator%2) && !see[v.i].friendly && this.safe){
                     this.setSpeed(~~(see[v.i].dist / 100) + 2);
                     this.turnTo(this.a - see[v.i].a);
                     return;
@@ -289,7 +287,7 @@ Entity.prototype.process = function(){
             if(this.alignment !== entities[$].alignment && entities[$].alive && !entities[$].safe){
                 if(dist(this.x, this.y, entities[$].x, entities[$].y) < 24){
                     entities[$].hasFlag = true;
-                    entities[$].fC = this.ID; // Keep track of which flag was taken.
+                    entities[$].fC = this.discriminator; // Keep track of which flag was taken.
                     this.flag = null;
                     break;
                 }
@@ -366,10 +364,10 @@ Entity.prototype.process = function(){
         ellipse(obj.x, obj.y, obj.range, obj.range);
         strokeWeight(1);
         for(var _ = 0; _ < entities.length; _ ++){
-            if(this.discrim === entities[_].discrim){ continue; }
+            if(this.discriminator === entities[_].discriminator){ continue; }
             if(abs(dist(this.x, this.y, entities[_].x, entities[_].y) - obj.range/2) < M1){
                 if(obj.msg === "RELEASE" && entities[_].alive === false){
-                    entities[_].alive = null;println("liberated "+entities[_].discrim);
+                    entities[_].alive = null;println("liberated "+entities[_].discriminator);
                 }
                 entities[_].RAM.push(obj.msg);
             }
