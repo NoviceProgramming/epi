@@ -305,7 +305,7 @@ Entity.prototype.process = function(){
             }
         }else{
             for(var $ = 0; $ < entities.length; $ ++){
-                if(this.alignment !== entities[$].alignment && entities[$].flag === false){
+                if(this.alignment !== entities[$].alignment && entities[$].flag === false && entities[$].alive){
                     if(dist(this.x, this.y, entities[$].x, entities[$].y) < 16){
                         entities[$].v = 0;
                         this.kill();
