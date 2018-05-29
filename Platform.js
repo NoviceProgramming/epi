@@ -133,7 +133,7 @@ Entity.prototype.send = function(msg, vol){
     this.msgCD = 5 + 2.85*pow(vol, 1.5); //Prevention of overuse
 };
 Entity.prototype.wait = function(frames){
-    this.cd = this.restart - frames;
+    this.cd = frames;
 };
 Entity.prototype.turn = function(angle){
     //var av = abs(angle - this.a) > 40 ? (abs(angle - this.a)/10) : 4;
@@ -322,14 +322,14 @@ Entity.prototype.process = function(){
     }
     this.regen = min(1.01*this.regen + 0.01, 4);
     var relativeSpeed = constrain(constrain(this._v - this.v, -this.topSpeed, this.topSpeed), -this.acceleration, this.acceleration);
-    if(this.stamina > 1 && this.cd > this.restart & this._v > 0){
+    if(this.stamina > 1 && this.cd <= 0 & this._v > 0){
         this.stamina -= abs(relativeSpeed) + abs(this.v/3);
         this.fatigue += (abs(relativeSpeed) + abs(this.v/3)) / 5;
         this.regen = max(0, this.regen - (abs(relativeSpeed) + abs(this.v/5)));
     }else{
         this.v = max(this.v - 0.6, 0);
         this._v = max(this.v - 0.6, 0);
-        this.cd = this.stamina > 1 ? this.cd + 1 : 0;
+        this.cd = this.stamina > 1 ? this.cd - 1 : this.restart;
     }
     this.v += relativeSpeed * (this.hasFlag ? 0.85 : 1);
     this.px = this.x;
