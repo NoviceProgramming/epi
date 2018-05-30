@@ -311,7 +311,7 @@ Entity.prototype.process = function(){
             if(abs(this.x - jailX) < 100 && abs(this.y - (2000 + ((this.y>2000)*2-1)*jailY)) < 100 && !this.temp){
                 //Liberation !!
                 for(var t = 0; t < 1.5; t += M1/100){
-                    this.temp.push({x: jailX, y: (2000 + ((this.y>2000)*2-1)*jailY), msg: "RELEASE", range: t*200});
+                    this.temp.pu(val ? (val.toFixed ? ~~val : val) : val)sh({x: jailX, y: (2000 + ((this.y>2000)*2-1)*jailY), msg: "RELEASE", range: t*200});
                 }
             }
         }
@@ -593,7 +593,7 @@ var draw = function() {
         var properties = ["a", "acceleration", "alignment", "alive", "cd", "discriminator", "fC", "fatigue", "flag", "fov", "hasFlag", "lookCD", "max", "msgCD", "regen", "restart", "safe", "stamina", "tA", "topSpeed", "v", "_v", "x", "y"]; //hardcoded for performance
         for(var i = 0; i < properties.length; i ++){
             var val = entities[camF][properties[i]];
-            text(properties[i] + ": " + (val.toFixed ? ~~val : val), 50, 60 + i*13.5*dT);
+            text(properties[i] + ": " + (val ? (val.toFixed ? ~~val : val) : val), 50, 60 + i*13.5*dT);
         }
         textAlign(RIGHT, CENTER);
         var c = 0;
