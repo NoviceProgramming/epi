@@ -399,7 +399,9 @@ Entity.prototype.draw = function() {
         noStroke();
         fill(255, 255, 255, 80);
         rect(0, 0, fhr/2, fhr/2);
-        scale(2.5);
+        translate(0, -10 * spaceISO.t);
+        rotate(-spaceISO.xz);
+        scale(2.5, 2.5 * (1+spaceISO.t));
         strokeWeight(3);
         stroke(179, 113, 0, this.flag*180+70);
         line(-7, -8, -7, 8);
@@ -409,6 +411,10 @@ Entity.prototype.draw = function() {
         strokeWeight(1);
         popMatrix();
         return;
+    }else{
+        translate(0, -10 * spaceISO.t);
+        rotate(-spaceISO.xz);
+        scale(1, 1 + spaceISO.t);
     }
     fill(colors[this.alignment]);
     ellipse(0, 0, 15, 15);
