@@ -33,7 +33,6 @@ smooth();
 var camX = 0, camY = 0, camX2 = 0, camY2 = 0, camS = 1, camS2 = 1, camV = 7, camF = 0;
 var discrim = 0;
 
-var spaceISO;
 var M1 = 10; //speed of "sound" in px
 var fhr = 120; //flag house radius
 var mapLength = 2500;
@@ -400,9 +399,7 @@ Entity.prototype.draw = function() {
         noStroke();
         fill(255, 255, 255, 80);
         rect(0, 0, fhr/2, fhr/2);
-        translate(0, -10 * spaceISO.t);
-        rotate(-spaceISO.xz);
-        scale(2.5, 2.5 * (1+spaceISO.t));
+        scale(2.5);
         strokeWeight(3);
         stroke(179, 113, 0, this.flag*180+70);
         line(-7, -8, -7, 8);
@@ -412,10 +409,6 @@ Entity.prototype.draw = function() {
         strokeWeight(1);
         popMatrix();
         return;
-    }else{
-        translate(0, -10 * spaceISO.t);
-        rotate(-spaceISO.xz);
-        scale(1, 1 + spaceISO.t);
     }
     fill(colors[this.alignment]);
     ellipse(0, 0, 15, 15);
