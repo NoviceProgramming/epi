@@ -2,10 +2,9 @@
 RIGHTCLICK && LEFTCLICK TO CHANGE FOCUS
 MIDDLECLICK TO TOGGLE PERSPECTIVE
 SCROLL TO ZOOM IN/OUT
-
+D TO TOGGLE DEBUG
  * Ctrl+F : "@HERE" to go to the area with the algorithms
 *//**Algorithm Challenge: Capture the Flag
-
 @RULES:
 You are allowed to read from ALL properties of Entity.
 You are allowed to read from ALL global variables except for "entities"
@@ -17,12 +16,9 @@ You are NOT allowed to set/modify variables outside (this) Entity.
 You are NOT allowed to draw to canvas.
 You are NOT allowed set/modify properties of Entity other than 'RAM'.
 You are NOT allowed use functions other than 'Math' and properties of (this) Entity.
-
 Note: You can either create and use properties of Entity.RAM or create and use variables of your own.
-
 @INSTRUCTIONS:
 Design an algorithm that multiple entities (a team) will operate under to capture the opponent's flag.
-
  */
 
 
@@ -488,7 +484,7 @@ for(var i = 0; i < 9; i ++){
 }*/
 
 (function() {
-    var x = ~~random(2, 8) * 125;
+    var x = ~~random(2, 6) * 125;
     var y = ~~random(1, 4) * 250;
     entities.push(new Entity(1000-x, y, teamAid, true));
     entities.push(new Entity(1000+x, y, teamAid, true));
@@ -520,6 +516,8 @@ iso.prototype.apply = function(){
     this.t += (this.active - this.t) / 17;
 };
 var spaceISO = new iso();
+var debugInfo = false;
+var dT = 0; //debug transition (value)
 
 var mouseScrolled = function() {
     //jshint noarg: false
@@ -535,24 +533,22 @@ var mousePressed = function(){
     camF = camF === -1 ? camF = entities.length : camF;
     if(camF === entities.length){
         camS2 = 0.3;
-        camX2 = mouseX/600 * -600 + 300;
-        camY2 = mouseY/600 * -2500 + 250;
-    }else{
-        camS2 = 1;
-        camX2 = (-entities[camF].x + 300*camS2) * camS2;
-        camY2 = (-entities[camF].y + 300*camS2) * camS2;
     }
-    camS2 = camF === entities.length ? 0.3 : 1;
 };
+var keyPressed = function(){
+    debugInfo = keyCode === 68 ? !debugInfo : debugInfo;
+};
+keyReleased = function(){};
 var draw = function() {
     spaceISO.apply();
     
     translate(-camX*camS, -camY*camS);
     translate(300, 300);
     scale(camS);
+    dT += (debugInfo - dT) / 20;
     camX += (camX2 - camX) / camV;
     camY += (camY2 - camY) / camV;
-    camS += (camS2 - camS) / camV * 2;
+    camS += (camS2 - camS) / camV;
     fill(255, 0, 0);
     background(255, 255, 255);
     image(bg, 1250, 2000, 2500, 4000);
@@ -570,6 +566,13 @@ var draw = function() {
             entities[i].kill();
         }
     }
+    if(entities[camF]){
+        noFill();
+        strokeWeight(10);
+        stroke(237, 121, 237, 100);
+        ellipse(entities[camF].x, entities[camF].y, 16, 16);
+        strokeWeight(1);
+    }
     noStroke();
     resetMatrix();
     if(camF === entities.length){
@@ -578,6 +581,27 @@ var draw = function() {
     }else{
         camX2 = entities[camF].x;
         camY2 = entities[camF].y;
+        fill(255, 255, 255, 120*dT);
+        rect(90, 40+172*dT, 120, 400*dT);
+        rect(510, 40+172*dT, 120, 400*dT);
+        fill(0, 0, 0, 200*dT);
+        textSize(16);
+        text("debugInfo", 75, 40);
+        text("RAM", 535, 40);
+        textAlign(LEFT, CENTER);
+        textSize(12);
+        var properties = ["a", "acceleration", "alignment", "alive", "cd", "discriminator", "fC", "fatigue", "flag", "fov", "hasFlag", "lookCD", "max", "msgCD", "regen", "restart", "safe", "stamina", "tA", "topSpeed", "v", "_v", "x", "y"]; //hardcoded for performance
+        for(var i = 0; i < properties.length; i ++){
+            var val = entities[camF][properties[i]];
+            text(properties[i] + ": " + (val.toFixed ? ~~val : val), 50, 60 + i*13.5*dT);
+        }
+        textAlign(RIGHT, CENTER);
+        var c = 0;
+        for(var i in entities[camF].RAM){
+            var val = entities[camF].RAM[i];
+            text(i + ": " + String(val).substr(0, 16) + "...".substr(48-String(val).length*3, 4) /*(val.length ? "Array(" + val.length + ")" : (val.toFixed ? val.toFixed(1) : val))*/, 560, 60 + c++*13.5*dT);
+        }
+        textAlign(CENTER, CENTER);
     }
     fill(217, 217, 217, 100);
     rect(300, 65, 200, 80);
