@@ -33,6 +33,7 @@ smooth();
 var camX = 0, camY = 0, camX2 = 0, camY2 = 0, camS = 1, camS2 = 1, camV = 7, camF = 0;
 var discrim = 0;
 
+var spaceISO;
 var M1 = 10; //speed of "sound" in px
 var fhr = 120; //flag house radius
 var mapLength = 2500;
