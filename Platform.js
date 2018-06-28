@@ -370,23 +370,26 @@ Entity.prototype.process = function(){
         }
         this.temp.splice(0, 1);
     }
+    try{
+        this.algorithm();
+    }catch(err){
+        println(err);
+    }
     if(!this.alive){
         this._v = 2;
         if(this.alive === false){
             this.tA = atan2((2000 + ((this.y>2000)*2-1)*jailY) - this.y, jailX - this.x);
-            return;
+            if(this.safe && abs(this.y - mapHeight/2) > 100){
+                this.alive = true;
+            }
+            //return;
         }else{ // if null
             this.tA = atan2(entities[flagID[this.alignment][0]].y - this.y, 0);
             if(this.safe){
                 this.alive = true;
             }
-            return;
+            //return;
         }
-    }
-    try{
-        this.algorithm();
-    }catch(err){
-        println(err);
     }
 };
 Entity.prototype.draw = function() {
@@ -471,21 +474,9 @@ for(var i = 0; i <= 400; i += 50){
 
 var bg = bkgd.get();
 
-/*entities.push(new Entity(1000, 1000, 4));
-entities[0].hasFlag = true;
-var j = 1;
-var k = 5;
-for(var i = 0; i < 9; i ++){
-    var id = j + (k-j)*(i%2);
-    entities.push(new Entity(100, 800+i*50, id));
-    entities.push(new Entity(1900, 800+i*50, id));
-    entities.push(new Entity(800+i*50, 100, id));
-    entities.push(new Entity(800+i*50, 1900, id));
-}*/
-
 (function() {
     var x = ~~random(2, 6) * 125;
-    var y = ~~random(1, 4) * 250;
+    var y = ~~random(2, 4) * 250;
     entities.push(new Entity(1000-x, y, teamAid, true));
     entities.push(new Entity(1000+x, y, teamAid, true));
     entities.push(new Entity(1000-x, 4000-y, teamBid, true));
