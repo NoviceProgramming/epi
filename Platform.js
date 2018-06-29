@@ -32,6 +32,7 @@ smooth();
 
 var camX = 0, camY = 0, camX2 = 0, camY2 = 0, camS = 1, camS2 = 1, camV = 7, camF = 0;
 var discrim = 0;
+var popups = [], Popup;
 
 var M1 = 10; //speed of "sound" in px
 var fhr = 120; //flag house radius
@@ -170,6 +171,9 @@ Entity.prototype.algorithm = function(AI){
                     return;
                 }
             }
+            if(this.alive === false && frameCount%400 === 0){
+                //this.send("sos", 10);
+            }
             this.setSpeed(0); //S T O P
             this.turn(4); // scan
             break;
@@ -297,6 +301,9 @@ Entity.prototype.process = function(){
             if(this.hasFlag){
                 this.hasFlag = false;
                 pts[this.alignment] ++;
+                // why kapjs... why would you use this weird x-FFFFFF format
+                var adj = colors[this.alignment] + 0xFFFFFF;
+                popups.push(new Popup(names[this.alignment].toUpperCase() + " SCORES", ~~(adj/65536), ~~(adj/256)%256, adj%256+1, 80, 300));
                 entities[this.fC].flag = true;
             }
         }else{
@@ -510,6 +517,27 @@ var spaceISO = new iso();
 var debugInfo = false;
 var dT = 0; //debug transition (value)
 
+var Popup = function(txt, r, g, b, tS, ypos){
+    this.txt = txt;
+    this.y = ypos;
+    this.tS = tS;
+    this.r = r;
+    this.g = g;
+    this.b = b;
+    this.f = 0;
+};
+Popup.prototype.draw = function(){
+    this.f += 0.5;
+    stroke(0, 0, 0, 200 - (this.f > 20 ? this.f*5 : 140));
+    fill(255, 255, 255, 200 - (this.f > 20 ? this.f*5 : 140));
+    rect(300, this.y, 700, this.tS + pow(this.f-20, 2) * ((this.f > 20)*0.4 + 0.1));
+    textSize(this.tS);
+    fill(this.r, this.g, this.b, 255 -abs(this.f - 20) * 10);
+    text(this.txt, this.f > 20 ? 300+pow(this.f-20, 1.7) : this.f*this.f-100, this.y);
+    //                                     this.f-22 = 2f flash
+    return this.f > 50;
+};
+
 var mouseScrolled = function() {
     //jshint noarg: false
     arguments.callee.caller.arguments[0].preventDefault();
@@ -608,4 +636,7 @@ var draw = function() {
     fill(colors[teamBid]);
     text(pts[teamBid], 350, 50);
     fElapsed ++;
+    for(var i = 0; i < popups.length; i ++){
+        popups.splice(i, popups[i].draw());
+    }
 };
