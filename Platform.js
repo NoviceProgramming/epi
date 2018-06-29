@@ -91,7 +91,7 @@ Entity.prototype.look = function(){
     if(this.lookCD > 0){ return "Still on cooldown; " + this.lookCD + "f remain"; }
     var out = [];
     for(var _ = 0; _ < entities.length; _ ++){
-		if(this.discriminator === entities[_].discriminator || !entities[_].alive){ continue; }
+	if(this.discriminator === entities[_].discriminator || (!entities[_].alive && entities[_].alignment !== this.alignment)){ continue; }
         var relativeAngle = this.a - (atan2(this.y - entities[_].y, this.x - entities[_].x)) % 360 - 180;
         var distance = dist(this.x, this.y, entities[_].x, entities[_].y);
         if(abs(relativeAngle) < this.fov/2 && distance < 4000){
