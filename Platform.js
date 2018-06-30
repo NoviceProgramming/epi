@@ -368,7 +368,7 @@ Entity.prototype.process = function(){
         strokeWeight(1);
         for(var _ = 0; _ < entities.length; _ ++){
             if(this.discriminator === entities[_].discriminator){ continue; }
-            if(abs(dist(this.x, this.y, obj.x, obj.y) - obj.range/2) < M1){
+            if(abs(dist(entities[_].x, entities[_].y, obj.x, obj.y) - obj.range/2) < M1){
                 if(obj.msg === "RELEASE" && entities[_].alive === false){
                     entities[_].alive = null;println("liberated "+entities[_].discriminator);
                 }else{
