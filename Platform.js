@@ -492,10 +492,10 @@ var bg = bkgd.get();
 }());
 
 for(var i = 0; i < 30; i ++){
-    entities.push(new Entity(65*i, 1000, 0));
+    entities.push(new Entity(65*i, 1000, teamAid));
 }
 for(var i = 0; i < 30; i ++){
-    entities.push(new Entity(65*i, 3000, 1));
+    entities.push(new Entity(65*i, 3000, teamBid));
 }
 
 var iso = function(){
