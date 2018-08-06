@@ -43,7 +43,7 @@ var jailY = 1250; // more specifically, y pos from border
 
 var entities = [];
 var names = ["red", "blue", "green", "gray", "yellow", "purple", "orange"];
-var pts = [0, 0];
+var pts = [];
 var flagID = [];
 
 var teamAid = 0;
@@ -491,6 +491,8 @@ var bg = bkgd.get();
     entities.push(new Entity(1000+x, 4000-y, teamBid, true));
 }());
 
+pts[teamAid] = 0;
+pts[teamBid] = 0;
 for(var i = 0; i < 30; i ++){
     entities.push(new Entity(65*i, 1000, teamAid));
 }
