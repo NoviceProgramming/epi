@@ -315,7 +315,7 @@ Entity.prototype.process = function(){
                     }
                 }
             }
-            if(abs(this.x - jailX) < 100 && abs(this.y - (2000 + ((this.y>2000)*2-1)*jailY)) < 100 && !this.temp){
+            if(abs(this.x - jailX) < 100 && abs(this.y - (2000 + ((this.y>2000)*2-1)*jailY)) < 100 && !this.temp.length){
                 //Liberation !!
                 for(var t = 0; t < 1.5; t += M1/100){
                     this.temp.push({x: jailX, y: (2000 + ((this.y>2000)*2-1)*jailY), msg: "RELEASE", range: t*200});
