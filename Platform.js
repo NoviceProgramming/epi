@@ -584,7 +584,7 @@ var draw = function() {
         fill(noise(i/50)*255+100, noise(i/50, i/50)*255+100, 255);
         entities[i].process();
         entities[i].draw();
-        if(abs(entities[i].x - 1250) > 2500 || abs(entities[i].y - 2000) > 2000){
+        if(abs(entities[i].x - 1250) > 1250 || abs(entities[i].y - 2000) > 2000){
             entities[i].kill();
         }
     }
