@@ -335,8 +335,8 @@ Entity.prototype.process = function(){
         this.cd = this.stamina > 1 ? this.cd - 1 : this.restart;
     }
     this.v += relativeSpeed * (this.hasFlag ? 0.85 : 1);
-    this.px = this.x;
-    this.py = this.y;
+    var px = this.x;
+    var py = this.y;
     this.x += cos(this.a) * this.v;
     this.y += sin(this.a) * this.v;
     for(var f = 0; f < flagID[this.alignment].length; f ++){
@@ -348,6 +348,13 @@ Entity.prototype.process = function(){
         }
     }
     
+    if(abs(this.x - 1250) > 1250){
+        this.x = px;
+    }
+    if(abs(this.y - 2000) > 2000){
+        this.y = py;
+    }
+	
     this.a = (this.a + 360) % 360;
     this.tA = (this.tA + 360) % 360;
     /* "smart" turning, concept (and code) taken from here:*//** https://www.khanacademy.org/cs/a/6141374645600256 */
@@ -584,9 +591,6 @@ var draw = function() {
         fill(noise(i/50)*255+100, noise(i/50, i/50)*255+100, 255);
         entities[i].process();
         entities[i].draw();
-        if(abs(entities[i].x - 1250) > 1250 || abs(entities[i].y - 2000) > 2000){
-            entities[i].kill();
-        }
     }
     if(entities[camF]){
         noFill();
